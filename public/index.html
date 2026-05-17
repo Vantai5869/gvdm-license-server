@@ -187,11 +187,12 @@
           <th>Mã kích hoạt</th>
           <th>Ghi chú</th>
           <th>Ngày tạo</th>
+          <th>Thiết bị</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="codesBody">
-        <tr class="empty-row"><td colspan="4">Đang tải...</td></tr>
+        <tr class="empty-row"><td colspan="5">Đang tải...</td></tr>
       </tbody>
     </table>
   </div>
@@ -329,7 +330,7 @@
   // ── Codes ──
   async function loadCodes() {
     const tbody = document.getElementById('codesBody');
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Đang tải...</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Đang tải...</td></tr>';
     const r = await fetch(`${API}/api/admin/codes`, { headers: { Authorization: authHeader() } });
     const { codes } = await r.json();
     renderCodes(codes);
@@ -338,21 +339,40 @@
   function renderCodes(codes) {
     const tbody = document.getElementById('codesBody');
     if (!codes || codes.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Chưa có mã nào. Tạo mã đầu tiên bên trên.</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Chưa có mã nào. Tạo mã đầu tiên bên trên.</td></tr>';
       return;
     }
-    tbody.innerHTML = codes.map(c => `
-      <tr>
+    tbody.innerHTML = codes.map(c => {
+      const deviceHtml = c.device
+        ? `<span style="font-size:11px;color:var(--label2);" title="${c.device.deviceId}">🔒 Đã gắn máy</span>
+           <button class="btn-reset-device" data-code="${c.code}" style="margin-left:6px;font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid var(--sep);background:var(--surface2);cursor:pointer;color:var(--label2);" title="Huỷ gắn máy để dùng máy khác">Reset</button>`
+        : `<span style="font-size:11px;color:var(--green);">✓ Chưa gắn</span>`;
+      return `<tr>
         <td><span class="code-badge">${c.code}</span></td>
         <td>${c.note || '<span style="color:var(--label2)">—</span>'}</td>
         <td><span class="date-txt">${formatDate(c.createdAt)}</span></td>
+        <td>${deviceHtml}</td>
         <td><button class="btn-del" data-code="${c.code}" title="Xoá mã">✕</button></td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
 
     tbody.querySelectorAll('.btn-del').forEach(btn => {
       btn.addEventListener('click', () => deleteCode(btn.dataset.code));
     });
+    tbody.querySelectorAll('.btn-reset-device').forEach(btn => {
+      btn.addEventListener('click', () => resetDevice(btn.dataset.code));
+    });
+  }
+
+  async function resetDevice(code) {
+    if (!confirm(`Huỷ gắn máy cho mã ${code}?\nMáy hiện tại sẽ bị đăng xuất, người dùng cần kích hoạt lại trên máy mới.`)) return;
+    await fetch(`${API}/api/admin/codes`, {
+      method: 'POST',
+      headers: { Authorization: authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reset_device', code }),
+    });
+    showToast(`✓ Đã reset thiết bị cho mã ${code}`);
+    loadCodes();
   }
 
   document.getElementById('btnAddCode').addEventListener('click', async () => {

@@ -18,14 +18,23 @@ module.exports = async function handler(req, res) {
         const codes = await Promise.all(
             index.map(async (code) => {
                 const data = await redis.get(`code:${code}`);
-                return { code, ...(data || {}) };
+                const deviceData = await redis.get(`code:device:${code}`);
+                return { code, ...(data || {}), device: deviceData || null };
             })
         );
         return res.status(200).json({ codes });
     }
 
     if (req.method === 'POST') {
-        const { note } = req.body || {};
+        const { note, action, code: targetCode } = req.body || {};
+
+        // Reset device binding
+        if (action === 'reset_device' && targetCode) {
+            await redis.del(`code:device:${targetCode.toUpperCase().trim()}`);
+            return res.status(200).json({ success: true });
+        }
+
+        // Tạo code mới
         const code = generateCode();
         const data = {
             note: (note || '').trim(),
@@ -43,6 +52,7 @@ module.exports = async function handler(req, res) {
         const { code } = req.body || {};
         if (!code) return res.status(400).json({ error: 'Thiếu mã' });
         await redis.del(`code:${code}`);
+        await redis.del(`code:device:${code}`);
         const index = (await redis.get('codes:index') || []).filter(c => c !== code);
         await redis.set('codes:index', index);
         return res.status(200).json({ success: true });
