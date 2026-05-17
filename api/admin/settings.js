@@ -1,4 +1,3 @@
-const redis = require('../_redis');
 const { checkAuth, cors } = require('../_auth');
 
 module.exports = async function handler(req, res) {
@@ -6,6 +5,15 @@ module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     if (!checkAuth(req)) return res.status(401).json({ error: 'Sai mật khẩu' });
+
+    const redis = require('../_redis');
+    if (!redis) {
+        return res.status(500).json({
+            error: 'Redis chưa được cấu hình',
+            hint: 'Kiểm tra env vars: UPSTASH_REDIS_REST_URL và UPSTASH_REDIS_REST_TOKEN trong Vercel Settings',
+            available: Object.keys(process.env).filter(k => k.includes('REDIS') || k.includes('KV') || k.includes('UPSTASH')),
+        });
+    }
 
     if (req.method === 'GET') {
         const mode = await redis.get('config:mode') || 'allow_all';
