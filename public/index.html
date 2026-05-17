@@ -54,9 +54,23 @@
                        background: linear-gradient(160deg,#5856d6,#007aff); display: flex;
                        align-items: center; justify-content: center; font-size: 22px; }
   .page-header h1 { font-size: 22px; font-weight: 700; }
-  .page-header .logout { margin-left: auto; background: none; border: 1px solid var(--sep);
+  .page-header .hdr-btns { margin-left: auto; display: flex; gap: 8px; }
+  .page-header .hdr-btns button { background: none; border: 1px solid var(--sep);
                          border-radius: 8px; padding: 5px 12px; font-size: 13px; cursor: pointer;
                          color: var(--label2); font-family: inherit; }
+  .page-header .hdr-btns button:hover { background: var(--surface2); }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 50;
+                    display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal-card { background: var(--surface); border-radius: 20px; padding: 28px 24px;
+                width: 100%; max-width: 360px; box-shadow: 0 8px 40px rgba(0,0,0,.18); }
+  .modal-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+  .btn-cancel { background: none; border: 1px solid var(--sep); border-radius: 10px;
+                padding: 9px 18px; font-size: 14px; font-weight: 500; cursor: pointer;
+                font-family: inherit; color: var(--label2); }
+  .btn-cancel:hover { background: var(--surface2); }
 
   .section { background: var(--surface); border-radius: 16px; overflow: hidden;
              box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 20px; }
@@ -142,7 +156,10 @@
   <div class="page-header">
     <div class="icon">✏️</div>
     <h1>Quản lý kích hoạt</h1>
-    <button class="logout" id="btnLogout">Đăng xuất</button>
+    <div class="hdr-btns">
+      <button id="btnOpenChangePass">Đổi mật khẩu</button>
+      <button id="btnLogout">Đăng xuất</button>
+    </div>
   </div>
 
   <!-- Mode -->
@@ -178,24 +195,28 @@
       </tbody>
     </table>
   </div>
-  <!-- Change password -->
-  <div class="section" id="changePassSection">
-    <div class="section-header">Đổi mật khẩu admin</div>
-    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
-      <div class="field" style="margin:0">
-        <label>Mật khẩu hiện tại</label>
-        <input id="inpCurPass" type="password" placeholder="••••••••">
-      </div>
-      <div class="field" style="margin:0">
-        <label>Mật khẩu mới</label>
-        <input id="inpNewPass" type="password" placeholder="Ít nhất 6 ký tự">
-      </div>
-      <div class="field" style="margin:0">
-        <label>Xác nhận mật khẩu mới</label>
-        <input id="inpConfPass" type="password" placeholder="Nhập lại mật khẩu mới">
-      </div>
-      <button class="btn-add" id="btnChangePass" style="align-self:flex-end">Lưu mật khẩu</button>
-      <div id="changePassErr" style="font-size:13px;color:var(--red);min-height:16px"></div>
+</div>
+
+<!-- Modal đổi mật khẩu -->
+<div class="modal-backdrop" id="changePassModal" style="display:none">
+  <div class="modal-card">
+    <h2>Đổi mật khẩu admin</h2>
+    <div class="field">
+      <label>Mật khẩu hiện tại</label>
+      <input id="inpCurPass" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label>Mật khẩu mới</label>
+      <input id="inpNewPass" type="password" placeholder="Ít nhất 6 ký tự" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>Xác nhận mật khẩu mới</label>
+      <input id="inpConfPass" type="password" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password">
+    </div>
+    <div id="changePassErr" style="font-size:13px;color:var(--red);min-height:16px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCancelPass">Huỷ</button>
+      <button class="btn-add" id="btnChangePass">Lưu mật khẩu</button>
     </div>
   </div>
 </div>
@@ -252,6 +273,23 @@
 
   document.getElementById('btnLogin').addEventListener('click', doLogin);
   document.getElementById('inpPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  // ── Modal đổi mật khẩu ──
+  function openChangePassModal() {
+    document.getElementById('inpCurPass').value = '';
+    document.getElementById('inpNewPass').value = '';
+    document.getElementById('inpConfPass').value = '';
+    document.getElementById('changePassErr').textContent = '';
+    document.getElementById('changePassModal').style.display = 'flex';
+    document.getElementById('inpCurPass').focus();
+  }
+  document.getElementById('btnOpenChangePass').addEventListener('click', openChangePassModal);
+  document.getElementById('btnCancelPass').addEventListener('click', () => {
+    document.getElementById('changePassModal').style.display = 'none';
+  });
+  document.getElementById('changePassModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+  });
 
   document.getElementById('btnLogout').addEventListener('click', () => {
     _auth = '';
@@ -375,11 +413,9 @@
 
     if (!r.ok) { errEl.textContent = d.error || 'Lỗi không xác định'; return; }
 
-    // Cập nhật auth hiện tại sang mật khẩu mới
+    // Cập nhật auth hiện tại sang mật khẩu mới và đóng modal
     _auth = `admin:${newPass}`;
-    document.getElementById('inpCurPass').value = '';
-    document.getElementById('inpNewPass').value = '';
-    document.getElementById('inpConfPass').value = '';
+    document.getElementById('changePassModal').style.display = 'none';
     showToast('Đã đổi mật khẩu thành công');
   });
 </script>
