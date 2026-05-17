@@ -1,4 +1,4 @@
-const { kv } = require('@vercel/kv');
+const redis = require('../_redis');
 const { checkAuth, cors } = require('../_auth');
 
 function generateCode() {
@@ -14,10 +14,10 @@ module.exports = async function handler(req, res) {
     if (!checkAuth(req)) return res.status(401).json({ error: 'Sai mật khẩu' });
 
     if (req.method === 'GET') {
-        const index = await kv.get('codes:index') || [];
+        const index = await redis.get('codes:index') || [];
         const codes = await Promise.all(
             index.map(async (code) => {
-                const data = await kv.get(`code:${code}`);
+                const data = await redis.get(`code:${code}`);
                 return { code, ...(data || {}) };
             })
         );
@@ -32,19 +32,19 @@ module.exports = async function handler(req, res) {
             createdAt: new Date().toISOString(),
             active: true,
         };
-        await kv.set(`code:${code}`, data);
-        const index = await kv.get('codes:index') || [];
+        await redis.set(`code:${code}`, data);
+        const index = await redis.get('codes:index') || [];
         index.unshift(code);
-        await kv.set('codes:index', index);
+        await redis.set('codes:index', index);
         return res.status(200).json({ code, ...data });
     }
 
     if (req.method === 'DELETE') {
         const { code } = req.body || {};
         if (!code) return res.status(400).json({ error: 'Thiếu mã' });
-        await kv.del(`code:${code}`);
-        const index = (await kv.get('codes:index') || []).filter(c => c !== code);
-        await kv.set('codes:index', index);
+        await redis.del(`code:${code}`);
+        const index = (await redis.get('codes:index') || []).filter(c => c !== code);
+        await redis.set('codes:index', index);
         return res.status(200).json({ success: true });
     }
 

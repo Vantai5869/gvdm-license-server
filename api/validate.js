@@ -1,4 +1,4 @@
-const { kv } = require('@vercel/kv');
+const redis = require('./_redis');
 const { cors } = require('./_auth');
 
 module.exports = async function handler(req, res) {
@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ valid: false, error: 'Thiếu mã kích hoạt' });
     }
 
-    const data = await kv.get(`code:${code.toUpperCase().trim()}`);
+    const data = await redis.get(`code:${code.toUpperCase().trim()}`);
     if (!data || !data.active) {
         return res.status(200).json({ valid: false });
     }

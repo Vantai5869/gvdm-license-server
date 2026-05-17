@@ -1,4 +1,4 @@
-const { kv } = require('@vercel/kv');
+const redis = require('../_redis');
 const { checkAuth, cors } = require('../_auth');
 
 module.exports = async function handler(req, res) {
@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
     if (!checkAuth(req)) return res.status(401).json({ error: 'Sai mật khẩu' });
 
     if (req.method === 'GET') {
-        const mode = await kv.get('config:mode') || 'allow_all';
+        const mode = await redis.get('config:mode') || 'allow_all';
         return res.status(200).json({ mode });
     }
 
@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
         if (!['allow_all', 'code_required'].includes(mode)) {
             return res.status(400).json({ error: 'Chế độ không hợp lệ' });
         }
-        await kv.set('config:mode', mode);
+        await redis.set('config:mode', mode);
         return res.status(200).json({ mode });
     }
 
