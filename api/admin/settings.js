@@ -4,7 +4,7 @@ module.exports = async function handler(req, res) {
     cors(res);
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    if (!checkAuth(req)) return res.status(401).json({ error: 'Sai mật khẩu' });
+    if (!await checkAuth(req)) return res.status(401).json({ error: 'Sai mật khẩu' });
 
     const redis = require('../_redis');
     if (!redis) {

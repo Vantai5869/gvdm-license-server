@@ -178,6 +178,26 @@
       </tbody>
     </table>
   </div>
+  <!-- Change password -->
+  <div class="section" id="changePassSection">
+    <div class="section-header">Đổi mật khẩu admin</div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+      <div class="field" style="margin:0">
+        <label>Mật khẩu hiện tại</label>
+        <input id="inpCurPass" type="password" placeholder="••••••••">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Mật khẩu mới</label>
+        <input id="inpNewPass" type="password" placeholder="Ít nhất 6 ký tự">
+      </div>
+      <div class="field" style="margin:0">
+        <label>Xác nhận mật khẩu mới</label>
+        <input id="inpConfPass" type="password" placeholder="Nhập lại mật khẩu mới">
+      </div>
+      <button class="btn-add" id="btnChangePass" style="align-self:flex-end">Lưu mật khẩu</button>
+      <div id="changePassErr" style="font-size:13px;color:var(--red);min-height:16px"></div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -326,6 +346,42 @@
     showToast('Đã xoá mã');
     loadCodes();
   }
+
+  // ── Đổi mật khẩu ──
+  document.getElementById('btnChangePass').addEventListener('click', async () => {
+    const cur     = document.getElementById('inpCurPass').value;
+    const newPass = document.getElementById('inpNewPass').value;
+    const conf    = document.getElementById('inpConfPass').value;
+    const errEl   = document.getElementById('changePassErr');
+    errEl.textContent = '';
+
+    if (!cur || !newPass || !conf) { errEl.textContent = 'Vui lòng điền đầy đủ'; return; }
+    if (newPass.length < 6)        { errEl.textContent = 'Mật khẩu mới phải có ít nhất 6 ký tự'; return; }
+    if (newPass !== conf)          { errEl.textContent = 'Mật khẩu xác nhận không khớp'; return; }
+
+    const btn = document.getElementById('btnChangePass');
+    btn.disabled = true; btn.textContent = 'Đang lưu...';
+
+    // Dùng mật khẩu HIỆN TẠI để xác thực, sau đó gửi mật khẩu mới
+    const curAuth = 'Basic ' + btoa(`admin:${cur}`);
+    const r = await fetch(`${API}/api/admin/change-password`, {
+      method: 'POST',
+      headers: { Authorization: curAuth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword: newPass }),
+    });
+    const d = await r.json();
+
+    btn.disabled = false; btn.textContent = 'Lưu mật khẩu';
+
+    if (!r.ok) { errEl.textContent = d.error || 'Lỗi không xác định'; return; }
+
+    // Cập nhật auth hiện tại sang mật khẩu mới
+    _auth = `admin:${newPass}`;
+    document.getElementById('inpCurPass').value = '';
+    document.getElementById('inpNewPass').value = '';
+    document.getElementById('inpConfPass').value = '';
+    showToast('Đã đổi mật khẩu thành công');
+  });
 </script>
 </body>
 </html>
